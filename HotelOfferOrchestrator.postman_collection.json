@@ -1,0 +1,123 @@
+{
+  "info": {
+    "name": "Hotel Offer Orchestrator",
+    "description": "Test collection for the Hotel Offer Orchestrator assessment. Set the `baseUrl` variable if not running on localhost:3000.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" }
+  ],
+  "item": [
+    {
+      "name": "Get hotels - valid city with overlap (delhi)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/hotels?city=delhi",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "hotels"],
+          "query": [{ "key": "city", "value": "delhi" }]
+        },
+        "description": "Expects a deduplicated list where 'Holtin' (present in both suppliers) resolves to Supplier B's cheaper price."
+      },
+      "response": []
+    },
+    {
+      "name": "Get hotels - city with no results (mumbai)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/hotels?city=mumbai",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "hotels"],
+          "query": [{ "key": "city", "value": "mumbai" }]
+        },
+        "description": "Both mock suppliers only have data for 'delhi', so this should return an empty array []."
+      },
+      "response": []
+    },
+    {
+      "name": "Get hotels - price range filter (delhi, 5000-6000)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/hotels?city=delhi&minPrice=5000&maxPrice=6000",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "hotels"],
+          "query": [
+            { "key": "city", "value": "delhi" },
+            { "key": "minPrice", "value": "5000" },
+            { "key": "maxPrice", "value": "6000" }
+          ]
+        },
+        "description": "Filtering is performed natively in Redis via ZRANGE BY SCORE against the sorted set the workflow just wrote."
+      },
+      "response": []
+    },
+    {
+      "name": "Missing city parameter",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/hotels",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "hotels"]
+        },
+        "description": "Expects a 400 error: \"Missing 'city' query parameter.\""
+      },
+      "response": []
+    },
+    {
+      "name": "Mock Supplier A - raw response",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/supplierA/hotels?city=delhi",
+          "host": ["{{baseUrl}}"],
+          "path": ["supplierA", "hotels"],
+          "query": [{ "key": "city", "value": "delhi" }]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Mock Supplier B - raw response",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/supplierB/hotels?city=delhi",
+          "host": ["{{baseUrl}}"],
+          "path": ["supplierB", "hotels"],
+          "query": [{ "key": "city", "value": "delhi" }]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Health check",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["health"]
+        },
+        "description": "Reports overall status and reachability of Supplier A and Supplier B."
+      },
+      "response": []
+    },
+    {
+      "name": "(Optional) Simulate Supplier A down",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["health"]
+        },
+        "description": "To simulate: stop the app briefly, comment out the /supplierA/hotels route in supplier.routes.ts, restart, then re-run this request and 'Get hotels - valid city with overlap'. Expected: /health reports supplierA as 'down', and /api/hotels?city=delhi still returns Supplier B's hotels only (the workflow's activity retries then falls back to an empty list for A rather than failing the whole request)."
+      },
+      "response": []
+    }
+  ]
+}

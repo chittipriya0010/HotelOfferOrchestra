@@ -1,0 +1,27 @@
+services:
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  temporal:
+    image: temporalio/temporal:latest
+    command: server start-dev --ip 0.0.0.0 --ui-ip 0.0.0.0
+    ports:
+      - "7233:7233"
+      - "8233:8233"
+
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      # Suppliers are exposed by this same process, so it calls itself over localhost
+      API_URL: http://127.0.0.1:3000
+      # These two point at the OTHER containers by their service name (Docker's internal DNS)
+      REDIS_URL: redis://redis:6379
+      TEMPORAL_URL: temporal:7233
+    depends_on:
+      - redis
+      - temporal
